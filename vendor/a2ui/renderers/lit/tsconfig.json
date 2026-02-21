@@ -25,6 +25,18 @@
     "resolveJsonModule": true,
     "isolatedModules": true,
 
+    /* Resolve lit deps from ui workspace package */
+    "paths": {
+      "lit": ["../../../../ui/node_modules/lit"],
+      "lit/*": ["../../../../ui/node_modules/lit/*"],
+      "@lit/context": ["../../../../ui/node_modules/@lit/context"],
+      "@lit/context/*": ["../../../../ui/node_modules/@lit/context/*"],
+      "@lit-labs/signals": ["../../../../ui/node_modules/@lit-labs/signals"],
+      "@lit-labs/signals/*": ["../../../../ui/node_modules/@lit-labs/signals/*"],
+      "signal-utils": ["../../../../ui/node_modules/signal-utils"],
+      "signal-utils/*": ["../../../../ui/node_modules/signal-utils/declarations/*.d.ts", "../../../../ui/node_modules/signal-utils/*"]
+    },
+
     /* Linting */
     "strict": true,
     "noUnusedLocals": false,
