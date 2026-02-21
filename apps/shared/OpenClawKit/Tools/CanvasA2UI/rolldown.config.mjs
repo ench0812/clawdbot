@@ -38,12 +38,28 @@ function resolveUiDependency(moduleId) {
   );
 }
 
+// Rolldown incorrectly resolves signal-utils subpath exports via the "types"
+// condition (→ .d.ts) instead of "default" (→ .js). Work around this by
+// intercepting resolution with a plugin that rewrites to the dist JS files.
+const signalUtilsBase = resolveUiDependency("signal-utils");
+const signalUtilsPlugin = () => ({
+  name: "signal-utils-fix",
+  resolveId(source) {
+    if (source.startsWith("signal-utils/")) {
+      const subpath = source.slice("signal-utils/".length);
+      return path.resolve(signalUtilsBase, "dist", `${subpath}.ts.js`);
+    }
+    return null;
+  },
+});
+
 export default {
   input: fromHere("bootstrap.js"),
   experimental: {
     attachDebugInfo: "none",
   },
   treeshake: false,
+  plugins: [signalUtilsPlugin()],
   resolve: {
     alias: {
       "@a2ui/lit": path.resolve(a2uiLitDist, "index.js"),
@@ -55,7 +71,6 @@ export default {
       "@lit-labs/signals/": resolveUiDependency("@lit-labs/signals/"),
       lit: resolveUiDependency("lit"),
       "lit/": resolveUiDependency("lit/"),
-      "signal-utils/": resolveUiDependency("signal-utils/"),
     },
   },
   output: {
