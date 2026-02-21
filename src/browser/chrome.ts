@@ -185,10 +185,12 @@ export async function launchOpenClawChrome(
     (profile.color ?? DEFAULT_OPENCLAW_BROWSER_COLOR).toUpperCase(),
   );
 
-  // First launch to create preference files if missing, then decorate and relaunch.
-  const spawnOnce = () => {
+  // Spawn Chrome. When `cdpPort` is omitted the process starts without
+  // `--remote-debugging-port`, which is intentional for the bootstrap pass
+  // that only needs to create the profile directory (avoids binding the CDP
+  // port and then fighting with the "real" spawn for the same port).
+  const spawnChrome = (opts?: { cdpPort?: number }) => {
     const args: string[] = [
-      `--remote-debugging-port=${profile.cdpPort}`,
       `--user-data-dir=${userDataDir}`,
       "--no-first-run",
       "--no-default-browser-check",
@@ -200,6 +202,10 @@ export async function launchOpenClawChrome(
       "--hide-crash-restore-bubble",
       "--password-store=basic",
     ];
+
+    if (opts?.cdpPort != null) {
+      args.unshift(`--remote-debugging-port=${opts.cdpPort}`);
+    }
 
     if (resolved.headless) {
       // Best-effort; older Chromes may ignore.
@@ -243,8 +249,10 @@ export async function launchOpenClawChrome(
 
   // If the profile doesn't exist yet, bootstrap it once so Chrome creates defaults.
   // Then decorate (if needed) before the "real" run.
+  // Bootstrap deliberately omits --remote-debugging-port to avoid binding the CDP
+  // port; this prevents EADDRINUSE when the real spawn follows immediately after.
   if (needsBootstrap) {
-    const bootstrap = spawnOnce();
+    const bootstrap = spawnChrome();
     const deadline = Date.now() + 10_000;
     while (Date.now() < deadline) {
       if (exists(localStatePath) && exists(preferencesPath)) {
@@ -284,7 +292,7 @@ export async function launchOpenClawChrome(
     log.warn(`openclaw browser clean-exit prefs failed: ${String(err)}`);
   }
 
-  const proc = spawnOnce();
+  const proc = spawnChrome({ cdpPort: profile.cdpPort });
   // Wait for CDP to come up.
   const readyDeadline = Date.now() + 15_000;
   while (Date.now() < readyDeadline) {
